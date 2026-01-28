@@ -293,10 +293,10 @@ notes/
 scratch/
 experiments/
 
-# Quizzes and solutions and slides (not to be shared publicly)
+# Quizzes and solutions (not to be shared publicly)
 quizzes/
 solutions/
-slides/
+grading/
 
 # Test data created during labs
 test_data/
