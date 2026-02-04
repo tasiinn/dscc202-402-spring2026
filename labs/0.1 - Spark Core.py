@@ -471,13 +471,13 @@ print("✅ Task 4.1 complete: Discount calculation added")
 # MAGIC %md
 # MAGIC ### Task 4.2: Filter by Payment Method
 # MAGIC
-# MAGIC Filter the transactions to show only credit card payments (`paymentMethod` contains "credit").
+# MAGIC Filter the transactions to show only credit card payments (`paymentMethod` contains "amex").
 
 # COMMAND ----------
 
 # TODO: Filter for credit card payments
-# Filter where paymentMethod column contains "credit"
-# Use col("paymentMethod").contains("credit") or col("paymentMethod").like("%credit%")
+# Filter where paymentMethod column contains "amex"
+# Use col("paymentMethod").contains("amex") or col("paymentMethod").like("%amex%")
 
 credit_card_df = transactions_with_discount_df.filter(
       # Your filter condition here
@@ -490,7 +490,7 @@ display(credit_card_df)
 # CHECK YOUR WORK
 assert credit_card_df.count() > 0, "Should have credit card transactions"
 for row in credit_card_df.take(5):
-    assert "credit" in row.paymentMethod.lower(), "All rows should be credit card payments"
+    assert "amex" in row.paymentMethod.lower(), "All rows should be credit card payments"
 print(f"✅ Task 4.2 complete: {credit_card_df.count()} credit card transactions found")
 
 # COMMAND ----------
