@@ -217,7 +217,7 @@ franchises_df = spark.table("samples.bakehouse.sales_franchises")
 # INEFFICIENT APPROACH: Join then filter
 slow_join_df = (transactions_df
     .join(franchises_df, "franchiseID")
-    .filter(col("country") == "USA")
+    .filter(col("country") == "US")
 )
 
 print(f"Inefficient approach processes {transactions_df.count()} transactions")
@@ -227,7 +227,7 @@ print(f"Filtered result: {slow_join_df.count()} rows")
 # 1. Filter franchises_df where country == "USA"
 # 2. Join transactions_df with filtered franchises on "franchiseID"
 
-fast_franchises_df = franchises_df.filter( col("country") == "USA" )  # Filter condition for USA
+fast_franchises_df = franchises_df.filter( col("country") == "US" )  # Filter condition for USA
 fast_join_df = transactions_df.join( fast_franchises_df ,  "franchiseID" )  # Join with filtered DataFrame, join column
 
 print(f"\nEfficient approach joins with only {fast_franchises_df.count()} franchises")
