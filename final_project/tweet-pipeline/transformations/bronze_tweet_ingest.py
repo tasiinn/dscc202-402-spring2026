@@ -28,6 +28,9 @@
 # - pyspark.pipelines (as dp)
 # - pyspark.sql.types (for schema definition)
 # - pyspark.sql.functions (for column operations)
+import pyspark.pipelines as dp
+from pyspark.sql.types import StructType, StructField, StringType
+from pyspark.sql.functions import col, current_timestamp
 
 
 # COMMAND ----------
@@ -47,6 +50,10 @@ spark.conf.set("spark.sql.legacy.timeParserPolicy", "LEGACY")
 # COMMAND ----------
 
 # TODO: Create streaming table definition
+dp.create_streaming_table(
+    name="tweets_bronze",
+    comment="Raw tweet ingestion from S3 via CloudFiles Auto Loader"
+)
 
 
 # COMMAND ----------
@@ -65,7 +72,12 @@ spark.conf.set("spark.sql.legacy.timeParserPolicy", "LEGACY")
 # COMMAND ----------
 
 # TODO: Define tweet schema as StructType
-
+tweet_schema = StructType([
+    StructField("date",      StringType(), True),
+    StructField("user",      StringType(), True),
+    StructField("text",      StringType(), True),
+    StructField("sentiment", StringType(), True),
+])
 
 # COMMAND ----------
 
@@ -87,6 +99,18 @@ spark.conf.set("spark.sql.legacy.timeParserPolicy", "LEGACY")
 # COMMAND ----------
 
 # TODO: Define append_flow function for bronze ingestion
+@dp.append_flow(target="tweets_bronze")
+def ingest_tweets():
+    return (
+        spark.readStream
+             .format("cloudFiles")
+             .option("cloudFiles.format", "json")
+             .option("cloudFiles.schemaLocation", "/Volumes/workspace/default/checkpoints/")
+             .schema(tweet_schema)
+             .load("s3://dsas-datasets/tweets/")
+             .withColumn("source_file",      col("_metadata.file_path"))
+             .withColumn("processing_time",  current_timestamp())
+    )
 
 
 # COMMAND ----------

@@ -35,7 +35,12 @@
 # - pyspark.pipelines (as dp)
 # - pyspark.sql.types and pyspark.sql.functions
 # - mlflow for model loading
-
+import subprocess
+subprocess.run(["pip", "install", "transformers==4.35.2", "torch", "torchvision", "--quiet"], check=True)
+import pyspark.pipelines as dp
+from pyspark.sql.types import StructType, StructField, StringType, DoubleType
+from pyspark.sql.functions import col, when, udf, lower
+import mlflow
 
 # COMMAND ----------
 
@@ -47,7 +52,10 @@
 # COMMAND ----------
 
 # TODO: Create streaming table definition
-
+dp.create_streaming_table(
+    name="tweets_gold",
+    comment="Tweet data enriched with ML sentiment predictions from Unity Catalog model"
+)
 
 # COMMAND ----------
 
@@ -60,7 +68,7 @@
 # COMMAND ----------
 
 # TODO: Configure MLflow registry
-
+mlflow.set_registry_uri("databricks-uc")
 
 # COMMAND ----------
 
@@ -74,7 +82,10 @@
 # COMMAND ----------
 
 # TODO: Define model output schema
-
+model_output_schema = StructType([
+    StructField("label", StringType(),  True),
+    StructField("score", DoubleType(),  True),
+])
 
 # COMMAND ----------
 
@@ -90,7 +101,13 @@
 # COMMAND ----------
 
 # TODO: Load model and create Spark UDF
-
+MODEL_URI = "models:/workspace.default.small_sentiment_model/1"
+ 
+predict_udf = mlflow.pyfunc.spark_udf(
+    spark,
+    model_uri=MODEL_URI,
+    result_type=model_output_schema
+)
 
 # COMMAND ----------
 
@@ -115,7 +132,39 @@
 # COMMAND ----------
 
 # TODO: Define append_flow function for gold transformation
-
+@dp.append_flow(target="tweets_gold")
+def transform_gold():
+    return (
+        spark.readStream
+             .table("tweets_silver")
+             # Apply model — returns struct {label, score}
+             .withColumn("prediction",             predict_udf(col("cleaned_text")))
+             # Extract label (POSITIVE / NEGATIVE) and convert to lowercase
+             .withColumn("predicted_sentiment",    lower(col("prediction.label")))
+             # Scale confidence score to 0-100
+             .withColumn("predicted_score",        (col("prediction.score") * 100).cast("double"))
+             # Ground-truth binary: sentiment='0' → 0 (negative), sentiment='4' → 1 (positive)
+             .withColumn("sentiment_id",
+                         when(col("sentiment") == "0", 0)
+                         .when(col("sentiment") == "4", 1)
+                         .otherwise(1).cast("int"))
+             # Predicted binary: negative → 0, positive → 1
+             .withColumn("predicted_sentiment_id",
+                         when(col("predicted_sentiment") == "negative", 0)
+                         .otherwise(1).cast("int"))
+             .select(
+                 "timestamp",
+                 "mention",
+                 "cleaned_text",
+                 "text",
+                 "sentiment",
+                 "predicted_sentiment",
+                 "predicted_score",
+                 "sentiment_id",
+                 "predicted_sentiment_id",
+             )
+    )
+ 
 
 # COMMAND ----------
 
