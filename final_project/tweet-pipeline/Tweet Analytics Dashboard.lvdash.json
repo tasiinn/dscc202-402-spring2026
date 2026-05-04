@@ -1,0 +1,455 @@
+{
+  "datasets": [
+    {
+      "name": "3f429dcd",
+      "displayName": "total",
+      "queryLines": [
+        "SELECT COUNT(*) AS total_tweets \n",
+        "FROM workspace.default.tweets_bronze"
+      ]
+    },
+    {
+      "name": "553f337a",
+      "displayName": "with_mentions",
+      "queryLines": [
+        "SELECT COUNT(*) AS tweets_with_mentions \n",
+        "FROM workspace.default.tweets_silver\n",
+        "WHERE mention IS NOT NULL"
+      ]
+    },
+    {
+      "name": "f3625388",
+      "displayName": "without_mentions",
+      "queryLines": [
+        "SELECT COUNT(*) AS tweets_without_mentions \n",
+        "FROM workspace.default.tweets_silver\n",
+        "WHERE mention IS NULL"
+      ]
+    },
+    {
+      "name": "67950d37",
+      "displayName": "top_10_users",
+      "queryLines": [
+        "SELECT user, COUNT(*) AS tweet_count\n",
+        "FROM workspace.default.tweets_bronze\n",
+        "GROUP BY user\n",
+        "ORDER BY tweet_count DESC\n",
+        "LIMIT 10"
+      ]
+    },
+    {
+      "name": "8c9df73d",
+      "displayName": "top_10_pos",
+      "queryLines": [
+        "SELECT mention, positive\n",
+        "FROM workspace.default.gold_tweet_aggregations\n",
+        "ORDER BY positive DESC\n",
+        "LIMIT 10"
+      ]
+    },
+    {
+      "name": "85de95b1",
+      "displayName": "top_10_neg",
+      "queryLines": [
+        "SELECT mention, negative\n",
+        "FROM workspace.default.gold_tweet_aggregations\n",
+        "ORDER BY negative DESC\n",
+        "LIMIT 10"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "56b5c953",
+      "displayName": "tweet_analytics_dashboard",
+      "layout": [
+        {
+          "widget": {
+            "name": "top-1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "8c9df73d",
+                  "fields": [
+                    {
+                      "name": "sum(positive)",
+                      "expression": "SUM(`positive`)"
+                    },
+                    {
+                      "name": "mention",
+                      "expression": "`mention`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Top 10 positively mentioned accounts"
+              },
+              "mark": {
+                "colors": [
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 3
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 2
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 3
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 4
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 5
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 6
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 7
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 8
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 9
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 10
+                  }
+                ]
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(positive)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "mention",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "top",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "67950d37",
+                  "fields": [
+                    {
+                      "name": "sum(tweet_count)",
+                      "expression": "SUM(`tweet_count`)"
+                    },
+                    {
+                      "name": "user",
+                      "expression": "`user`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Top 10 users"
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(tweet_count)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "user",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 12,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "top-10-positively-mentioned-accounts",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "85de95b1",
+                  "fields": [
+                    {
+                      "name": "sum(negative)",
+                      "expression": "SUM(`negative`)"
+                    },
+                    {
+                      "name": "mention",
+                      "expression": "`mention`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Top 10 negatively mentioned accounts"
+              },
+              "mark": {
+                "colors": [
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 6
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 2
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 3
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 4
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 5
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 6
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 7
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 8
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 9
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 10
+                  }
+                ]
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(negative)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "mention",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 9,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "tot",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "3f429dcd",
+                  "fields": [
+                    {
+                      "name": "sum(total_tweets)",
+                      "expression": "SUM(`total_tweets`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "showDescription": false,
+                "title": "Total number of tweets"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(total_tweets)"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "tweets",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "553f337a",
+                  "fields": [
+                    {
+                      "name": "sum(tweets_with_mentions)",
+                      "expression": "SUM(`tweets_with_mentions`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Tweets with mentions"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(tweets_with_mentions)"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 1,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "tweets-without-mentions",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "f3625388",
+                  "fields": [
+                    {
+                      "name": "sum(tweets_without_mentions)",
+                      "expression": "SUM(`tweets_without_mentions`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Tweets without mentions"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(tweets_without_mentions)"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 1,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "6abd0982",
+            "multilineTextboxSpec": {
+              "lines": [
+                "<span style=\"text-align:center;display:block\"><span style=\"font-size: 28px;\">Tweet Analytics Dashboard</span></span>"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 1
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}
