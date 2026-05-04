@@ -37,12 +37,11 @@
 # - mlflow for model loading
 import subprocess
 subprocess.run(["pip", "install", "transformers==4.35.2", "torch", "--quiet"], check=True)
-
 import pyspark.pipelines as dp
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, IntegerType
-from pyspark.sql.functions import col, when
+from pyspark.sql.functions import col, when, lower
 import mlflow
-import pandas as pd
+
  
 
 # COMMAND ----------
@@ -71,8 +70,8 @@ dp.create_streaming_table(
 # COMMAND ----------
 
 # TODO: Configure MLflow registry
+
 mlflow.set_registry_uri("databricks-uc")
-MODEL_URI = "models:/workspace.default.small_sentiment_model/1"
 
 # COMMAND ----------
 
@@ -86,16 +85,11 @@ MODEL_URI = "models:/workspace.default.small_sentiment_model/1"
 # COMMAND ----------
 
 # TODO: Define model output schema
-gold_schema = StructType([
-    StructField("timestamp",              StringType(),  True),
-    StructField("mention",                StringType(),  True),
-    StructField("cleaned_text",           StringType(),  True),
-    StructField("text",                   StringType(),  True),
-    StructField("sentiment",              StringType(),  True),
-    StructField("predicted_sentiment",    StringType(),  True),
-    StructField("predicted_score",        DoubleType(),  True),
-    StructField("sentiment_id",           IntegerType(), True),
-    StructField("predicted_sentiment_id", IntegerType(), True),
+from pyspark.sql.types import StructType, StructField, StringType, DoubleType
+ 
+model_output_schema = StructType([
+    StructField("label", StringType(), True),
+    StructField("score", DoubleType(), True),
 ])
 
 # COMMAND ----------
@@ -112,30 +106,13 @@ gold_schema = StructType([
 # COMMAND ----------
 
 # TODO: Load model and create Spark UDF
-def predict_batch(iterator):
-    from transformers import pipeline
-    
-    # Load HuggingFace model directly — much lighter than going through MLflow
-    classifier = pipeline(
-        "text-classification",
-        model="distilbert/distilbert-base-uncased-finetuned-sst-2-english",
-        truncation=True,
-        max_length=512
-    )
-
-    for df in iterator:
-        texts = df["cleaned_text"].fillna("").tolist()
-        predictions = classifier(texts, batch_size=32)
-
-        df["predicted_sentiment"] = [p["label"].lower() for p in predictions]
-        df["predicted_score"]     = [float(p["score"]) * 100 for p in predictions]
-        df["sentiment_id"] = df["sentiment"].apply(
-            lambda s: 0 if s == "0" else 1
-        ).astype(int)
-        df["predicted_sentiment_id"] = df["predicted_sentiment"].apply(
-            lambda s: 0 if s == "negative" else 1
-        ).astype(int)
-        yield df
+MODEL_URI = "models:/workspace.default.small_sentiment_model/1"
+ 
+predict_udf = mlflow.pyfunc.spark_udf(
+    spark,
+    model_uri=MODEL_URI,
+    result_type=model_output_schema
+)
 
 # COMMAND ----------
 
@@ -160,14 +137,40 @@ def predict_batch(iterator):
 # COMMAND ----------
 
 # TODO: Define append_flow function for gold transformation
+gold_schema = StructType([
+    StructField("timestamp",              StringType(),  True),
+    StructField("mention",                StringType(),  True),
+    StructField("cleaned_text",           StringType(),  True),
+    StructField("text",                   StringType(),  True),
+    StructField("sentiment",              StringType(),  True),
+    StructField("predicted_sentiment",    StringType(),  True),
+    StructField("predicted_score",        DoubleType(),  True),
+    StructField("sentiment_id",           IntegerType(), True),
+    StructField("predicted_sentiment_id", IntegerType(), True),
+])
+ 
 @dp.append_flow(target="tweets_gold")
 def transform_gold():
     return (
         spark.readStream
+             # Process small batches to stay under 1GB Serverless memory limit
+             .option("maxBytesPerTrigger", "5m")
              .table("tweets_silver")
-             .mapInPandas(predict_batch, schema=gold_schema)
+             .withColumn("prediction",          predict_udf(col("cleaned_text")))
+             .withColumn("predicted_sentiment", lower(col("prediction.label")))
+             .withColumn("predicted_score",     (col("prediction.score") * 100).cast("double"))
+             .withColumn("sentiment_id",
+                         when(col("sentiment") == "0", 0)
+                         .otherwise(1).cast("int"))
+             .withColumn("predicted_sentiment_id",
+                         when(col("predicted_sentiment") == "negative", 0)
+                         .otherwise(1).cast("int"))
+             .select(
+                 "timestamp", "mention", "cleaned_text", "text", "sentiment",
+                 "predicted_sentiment", "predicted_score",
+                 "sentiment_id", "predicted_sentiment_id"
+             )
     )
- 
 
 # COMMAND ----------
 

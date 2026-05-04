@@ -30,6 +30,16 @@
 # - delta.tables.DeltaTable
 # - matplotlib.pyplot
 # - sklearn.metrics (confusion_matrix, classification_report, ConfusionMatrixDisplay)
+import pandas as pd
+import mlflow
+from mlflow import MlflowClient
+from delta.tables import DeltaTable
+import matplotlib.pyplot as plt
+from sklearn.metrics import (
+    confusion_matrix,
+    classification_report,
+    ConfusionMatrixDisplay,
+)
 
 
 # COMMAND ----------
@@ -45,7 +55,7 @@
 # COMMAND ----------
 
 # TODO: Load gold table
-
+gold_df = spark.read.format("delta").table("workspace.default.tweets_gold")
 
 # COMMAND ----------
 
@@ -64,7 +74,15 @@
 # COMMAND ----------
 
 # TODO: Generate classification report
-
+gold_pd = gold_df.toPandas()
+ 
+y_true = gold_pd["sentiment_id"]
+y_pred = gold_pd["predicted_sentiment_id"]
+ 
+target_names = ["Negative", "Positive"]
+ 
+report = classification_report(y_true, y_pred, target_names=target_names, output_dict=True)
+print(classification_report(y_true, y_pred, target_names=target_names))
 
 # COMMAND ----------
 
@@ -85,7 +103,15 @@
 # COMMAND ----------
 
 # TODO: Create and display confusion matrix
-
+cm = confusion_matrix(y_true, y_pred)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=target_names)
+ 
+fig, ax = plt.subplots(figsize=(6, 5))
+disp.plot(ax=ax, colorbar=False)
+ax.set_title("Sentiment Model — Confusion Matrix")
+plt.tight_layout()
+plt.savefig("/tmp/confusion_matrix.png", dpi=150)
+plt.show()
 
 # COMMAND ----------
 
@@ -110,7 +136,25 @@
 # COMMAND ----------
 
 # TODO: Log metrics and artifacts to MLflow
-
+mlflow.set_registry_uri("databricks-uc")
+ 
+# Get silver Delta table version for data lineage
+silver_dt      = DeltaTable.forName(spark, "workspace.default.tweets_silver")
+silver_version = silver_dt.history(1).select("version").collect()[0]["version"]
+ 
+with mlflow.start_run(run_name="sentiment_model_evaluation"):
+    # Metrics
+    mlflow.log_metric("accuracy", report["accuracy"])
+ 
+    # Parameters
+    mlflow.log_param("model_name",           "workspace.default.small_sentiment_model")
+    mlflow.log_param("model_version",        1)
+    mlflow.log_param("silver_delta_version", silver_version)
+ 
+    # Artifact
+    mlflow.log_artifact("/tmp/confusion_matrix.png", artifact_path="confusion_matrix.png")
+ 
+print(f"MLflow run complete. Accuracy: {report['accuracy']:.4f}")
 
 # COMMAND ----------
 
