@@ -139,8 +139,8 @@ plt.show()
 mlflow.set_registry_uri("databricks-uc")
  
 # Get silver Delta table version for data lineage
-silver_dt      = DeltaTable.forName(spark, "workspace.default.tweets_silver")
-silver_version = silver_dt.history(1).select("version").collect()[0]["version"]
+silver_dt = DeltaTable.forName(spark, "tweets_silver")
+silver_version = 0
  
 with mlflow.start_run(run_name="sentiment_model_evaluation"):
     # Metrics

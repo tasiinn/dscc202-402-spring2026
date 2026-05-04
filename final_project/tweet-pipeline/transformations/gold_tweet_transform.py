@@ -41,7 +41,7 @@ import pyspark.pipelines as dp
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, IntegerType
 from pyspark.sql.functions import col, when, lower
 import mlflow
-
+spark.conf.set("spark.sql.execution.arrow.maxRecordsPerBatch", "100")
  
 
 # COMMAND ----------
